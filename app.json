@@ -1,16 +1,18 @@
 {
   "expo": {
     "name": "RepAlong",
-    "slug": "RepAlong",
+    "slug": "repalong",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "repalong",
     "userInterfaceStyle": "automatic",
     "ios": {
+      "bundleIdentifier": "com.techden.repalong",
       "icon": "./assets/expo.icon"
     },
     "android": {
+      "package": "com.techden.repalong",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

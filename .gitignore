@@ -13,10 +13,16 @@ expo-env.d.ts
 .kotlin/
 *.orig.*
 *.jks
+*.keystore
 *.p8
 *.p12
 *.key
 *.mobileprovision
+
+# Firebase Admin / service accounts — never commit these
+*serviceAccount*.json
+*service-account*.json
+firebase-adminsdk*.json
 
 # Metro
 .metro-health-check*
@@ -31,6 +37,7 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
 
 # typescript
