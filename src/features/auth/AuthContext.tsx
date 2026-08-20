@@ -61,6 +61,8 @@ type AuthContextValue = {
   signOutSession: () => Promise<void>;
   retryProfileSetup: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  /** Re-fetches `users/{uid}` — call after a write elsewhere (e.g. onboarding completion) that changes it. */
+  refreshProfile: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -90,6 +92,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
     const unsubscribe = subscribeToAuthChanges((user) => {
       setFirebaseUser(user);
       setIsAuthLoading(false);
+      // Flip this in the same batch as `firebaseUser`/`isAuthLoading`, not in the
+      // profile-fetch effect below — otherwise there's a render tick where a
+      // signed-in user has firebaseUser set but isProfileLoading is still stale
+      // `false`, which is exactly the "flash into the wrong protected group while
+      // still loading" state route gating (src/app/_layout.tsx) must never show.
+      if (user) {
+        setIsProfileLoading(true);
+      }
     });
     return unsubscribe;
   }, []);
@@ -153,6 +163,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
       throw new ProfileSetupError();
     } finally {
       profileWriteInFlightUidRef.current = null;
+      // The auth-state-change effect above may have already flipped this to
+      // `true` for this same uid (see its comment); the passive fetch effect
+      // then no-ops because of the in-flight guard, so nothing else would
+      // ever clear it. This is the one place that reliably does.
+      setIsProfileLoading(false);
     }
   }, []);
 
@@ -201,6 +216,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }, [firebaseUser]);
 
+  const refreshProfile = useCallback(async () => {
+    if (!firebaseUser) return;
+    try {
+      const fetched = await fetchUserProfile(firebaseUser.uid);
+      setProfile(fetched);
+      setProfileError(null);
+    } catch {
+      setProfileError('Could not load your profile. Please try again.');
+    }
+  }, [firebaseUser]);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       firebaseUser,
@@ -217,6 +243,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       signOutSession,
       retryProfileSetup,
       resetPassword,
+      refreshProfile,
     }),
     [
       firebaseUser,
@@ -229,6 +256,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       signOutSession,
       retryProfileSetup,
       resetPassword,
+      refreshProfile,
     ],
   );
 

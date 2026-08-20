@@ -15,7 +15,8 @@ import type {
   UserProfileWrite,
 } from '@/types/user';
 
-function userDocRef(uid: string): DocumentReference {
+/** Exported so `profile.ts` can coordinate a single transaction across both collections. */
+export function userDocRef(uid: string): DocumentReference {
   return doc(firestoreDb, 'users', uid);
 }
 

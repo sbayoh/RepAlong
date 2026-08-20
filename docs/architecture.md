@@ -1,8 +1,12 @@
 # RepAlong — Foundation Architecture
 
-Status: Phase 1A — Authentication + Firestore foundation. Email/Password auth, plus
-password reset added in Phase 1B (§9a) (Google Sign-In, Apple Sign-In, and mandatory
-email verification remain later, separately reviewed phases).
+Status: Phase 2A.1 — profile foundation hardening (enum/duplicate allow-listing on
+`profiles/{uid}` arrays, `users/{uid}` identity-field sync, confirmed-missing-profile
+repair) on top of Phase 2A's profile + onboarding foundation, the Phase 1A
+Authentication + Firestore foundation, and the Phase 1B brand system/password reset
+(§9a). See §15 for what Phase 2A added and where Phase 2A.1's hardening notes are
+marked (Google Sign-In, Apple Sign-In, and mandatory email verification remain later,
+separately reviewed phases).
 
 ## 1. Universal Expo architecture
 
@@ -344,3 +348,201 @@ Google Sign-In, Apple Sign-In, mandatory email verification (the service layer e
 exists yet), Cloud Functions, deployed security rules, location, gyms, Host profiles,
 Shadow Sessions, Stripe. All later, separately reviewed phases. (Password reset was
 added in Phase 1B — see §9a.)
+
+## 15. Phase 2A — Profile + onboarding foundation
+
+### `profiles/{uid}` vs. `users/{uid}`
+
+`users/{uid}` (§10) stays exactly what it was: private account-foundation data
+(identity/contact/`onboardingCompleted`/`accountStatus`). Phase 2A adds a second
+document, `profiles/{uid}` (`src/types/profile.ts`), for the actual RepAlong profile —
+name, bio, experience level, goals, training interests, training vibe, hosting
+interest, `photoURL`. The split from §13 is now real, not just planned: `users/{uid}`
+never grew a `bio`/`goals`/etc. field, and `profiles/{uid}` never duplicated
+`email`/`accountStatus`. `onboardingCompleted` stays solely on `users/{uid}` — Phase 2A
+deliberately did not duplicate it onto `profiles/{uid}`, since a single source of truth
+for route gating (below) avoids the two documents ever disagreeing about it.
+
+**`profiles/{uid}` is the user-facing profile source; `firstName`/`lastName`/
+`displayName` are additionally synchronized onto `users/{uid}` (Phase 2A.1).** Once
+onboarding finishes, `profiles/{uid}` holds the identity the user actually finished
+onboarding with — `completeOnboarding` (below) writes those same three fields onto
+`users/{uid}` in the same transaction, purely because those fields already exist there
+from signup and would otherwise go stale (a user who changes their name during
+onboarding would keep seeing their old signup name anywhere `users/{uid}` is the
+source, e.g. a stale home-screen greeting before this fix). This is a narrow identity
+sync, not a general merge: `bio`, `goals`, `trainingInterests`, `trainingVibes`, and
+`interestedInHosting` are never written to `users/{uid}` — they remain
+`profiles/{uid}`-only, and any UI that displays them (the signed-in home summary card,
+below) reads `profiles/{uid}` once it has loaded, falling back to `users/{uid}` only
+while that read is still in flight or unavailable.
+
+**Still owner-readable only.** `profiles/{uid}` is shaped to eventually power
+discovery, but Phase 2A does not make it publicly readable — that visibility decision
+is deferred to a separately reviewed discovery phase (§13's reasoning still holds).
+
+**Product rule, enforced structurally, not by a schema field:** RepAlong has no
+`role: 'buddy' | 'host'` field anywhere. `interestedInHosting: boolean` on
+`profiles/{uid}` is the only hosting-related state in this phase — a signal, not a
+capability grant. One account can shadow a workout, host one, or both.
+
+### Service layer (`src/services/firebase/profile.ts`)
+
+Mirrors the `firestore.ts` (`users/{uid}`) pattern: screens never import Firestore SDK
+functions directly, only these typed helpers.
+
+- `getProfile(uid)` — plain read.
+- `createProfile(uid, data)` — idempotent create-if-missing transaction, mirroring
+  `ensureUserProfile`. Not called by the onboarding flow itself (see below); kept
+  available for a future recovery path that has real user-supplied data — deliberately
+  takes a full `OnboardingDraft`, not an optional seed, so it can't be called with
+  fabricated field values.
+- `updateProfile(uid, fields)` — restricted at the type level
+  (`UpdatableProfileFields`) to the editable profile fields.
+- `completeOnboarding(uid, draft)` — the one function the onboarding flow calls. Inside
+  a single `runTransaction`, it writes/updates `profiles/{uid}` (preserving an existing
+  doc's `createdAt`/`uid` if one somehow already exists — a defensive branch, not the
+  expected path), syncs `firstName`/`lastName`/`displayName` onto `users/{uid}` from
+  the same finalized draft, and sets `users/{uid}.onboardingCompleted = true` — all in
+  the same atomic operation. Because it's one transaction, there is no
+  partially-completed state to repair: either all writes land, or none do and the
+  "Finish setup" button can simply be retried.
+- `beginProfileRepair(uid)` (Phase 2A.1) — the controlled recovery path for
+  `users/{uid}.onboardingCompleted === true` with `profiles/{uid}` genuinely missing
+  (see the signed-in home section below for how a caller establishes "genuinely", as
+  opposed to a transient read failure). Inside one `runTransaction`, it re-reads
+  `profiles/{uid}`: if the document exists after all, it leaves `onboardingCompleted`
+  untouched and returns `{ outcome: 'profile-exists' }` (the caller just refreshes and
+  re-renders); only if the transaction's own read confirms the document is absent does
+  it flip `users/{uid}.onboardingCompleted` back to `false` and return
+  `{ outcome: 'repaired' }`. Never fabricates a replacement profile — the only effect of
+  a repair is resetting the routing flag so `(onboarding)` (below) becomes reachable
+  again to rebuild it with real answers.
+
+### Onboarding UI (`src/app/(onboarding)/`, `src/features/onboarding/`)
+
+Eight screens (`index` "Welcome" → `basics` → `experience` → `goals` → `interests` →
+`vibe` → `hosting` → `review`), all rendered through the existing Brand components —
+no new design system introduced. `OnboardingContext`
+(`src/features/onboarding/OnboardingContext.tsx`) holds the in-progress draft in plain
+React state, seeded from the signed-in user's existing name (`AuthContext.profile` /
+`firebaseUser.displayName`) for `displayName`'s default. Nothing is written to
+Firestore until the Review step's "Finish setup" calls `completeOnboarding` — so a
+network failure on any earlier step only loses in-memory draft state for that session,
+never leaves a half-written Firestore document, and never marks onboarding complete
+without the full write succeeding (`OnboardingContext.finishOnboarding` surfaces
+`submitError` and leaves the draft intact for retry on failure).
+
+Typed onboarding vocabulary (experience levels, goals, training interests, training
+vibes — stored values plus user-facing labels) lives in `src/constants/onboarding.ts`.
+Validation (`src/features/onboarding/validation.ts`, unit-tested) enforces the product
+rules client-side: at least one goal, at least one training interest, 1–3 training
+vibes, an experience level and a hosting choice before continuing.
+
+### Route gating (`src/app/_layout.tsx`)
+
+A third `Stack.Protected` group joins `(auth)`/`(app)`: `(onboarding)`, guarded by
+`firebaseUser && profile && !profile.onboardingCompleted` (`profile` here is the
+`users/{uid}` doc from `AuthContext`, not `profiles/{uid}` — no extra Firestore read is
+needed just to route). `(app)`'s guard covers both "onboarding complete" and "account
+doc still missing/loading" (`!profile`), preserving the Phase 1A retry-setup UX
+unchanged for that case.
+
+**Closing the initial-load flash gap:** the splash screen (`SplashScreenController`)
+now waits on `isProfileLoading` in addition to `isAuthLoading` before hiding, and
+`AuthContext` flips `isProfileLoading` to `true` in the same batch as `firebaseUser`
+being set (inside the `onAuthStateChanged` callback itself), not in a separate effect
+keyed off it. Previously there was a render tick where a signed-in user had
+`firebaseUser` set but `isProfileLoading` still stale-`false` before the passive fetch
+effect started it — during that tick the router would have picked `(app)` (profile
+still `null`) even for a user who'd actually completed onboarding, before correcting
+itself one render later. Native splash covers this window entirely now, so no group
+ever flashes before the real state is known.
+
+### Signed-in home (`src/app/(app)/index.tsx`)
+
+Replaced the Phase 1A/1B placeholder ("Your account foundation is ready…") with a
+minimal real home: "Welcome back, {firstName}", a static "RepAlong is getting ready
+for your next workout" line, and a profile summary card (avatar initials, experience
+level, top 3 goals/interests as chips) fetched via `getProfile`. No discovery feed,
+sessions, or marketplace content — those stay out of scope per Phase 2A.
+
+**Greeting name source (Phase 2A.1):** `firstName` prefers `profiles/{uid}` once it has
+loaded (`profile?.firstName`) — that's the finalized onboarding identity — falling back
+in order to `users/{uid}` (`accountProfile?.firstName`, available sooner and always
+in sync per the identity-sync note above), then the Auth `displayName`, then a generic
+"there". This ordering (rather than the reverse) is what makes a name changed during
+onboarding show up immediately on the very next home render, instead of only after
+`profiles/{uid}` happens to be re-fetched.
+
+**Missing-profile recovery (Phase 2A.1):** if `users/{uid}.onboardingCompleted` is
+`true` but `profiles/{uid}` is unexpectedly missing (or the read fails), the summary
+card shows `BrandErrorState` with a retry action — it never crashes and never
+fabricates placeholder profile data. The screen distinguishes two cases, tracked
+separately from the plain error message:
+
+- **Transient read failure** (the `getProfile` call itself throws, e.g. a network
+  error): ordinary "Try again" retry that just re-runs the same read. This alone can
+  never reset onboarding.
+- **Confirmed missing** (a *successful* `getProfile` read returns `null`): "Rebuild
+  profile" instead, calling `beginProfileRepair(uid)`. Only a successful read that
+  positively confirms absence is treated as confirmed-missing — a caught exception is
+  always treated as transient, never as grounds to reset onboarding. If the repair
+  transaction resets `onboardingCompleted` to `false`, the screen calls
+  `AuthContext.refreshProfile()` so the `users/{uid}` state routing (`src/app/
+  _layout.tsx`) reads is up to date; the existing `Stack.Protected` guard then
+  naturally moves the user from `(app)` into `(onboarding)` with no extra
+  routing logic needed. The user-facing copy avoids Firebase/technical language
+  ("Your profile information needs to be set up again," not "document not found").
+
+### Security rules (`firestore.rules`)
+
+`profiles/{uid}` follows the same owner-only read/create/update, delete-denied shape as
+`users/{uid}`. `isValidNewProfileDoc`/`isValidProfileUpdate` enforce: `uid` fixed to the
+caller and immutable after creation; `createdAt` immutable, both `createdAt` and
+`updatedAt` server-time-only; exact key set (`profileDocFields()`); `experienceLevel`
+constrained to the three allowed values; string length caps on `displayName`/
+`firstName`/`lastName` (60) and `bio` (300); array **upper-bound** caps on `goals` (8),
+`trainingInterests` (9), `trainingVibes` (3); `interestedInHosting` boolean;
+`photoURL` null-or-string.
+
+**Array contents are server allow-listed (Phase 2A.1).** Bounding array *length* was
+never enough on its own — nothing previously stopped a client from writing an
+arbitrary string into `goals`/`trainingInterests`/`trainingVibes`. `isValidEnumArray`
+(firestore.rules) now checks each of the three arrays against its own fixed allow-list
+(`allowedGoals()`/`allowedTrainingInterests()`/`allowedTrainingVibes()`, mirroring
+`src/constants/onboarding.ts`) via the rules language's `list.hasOnly(...)`, and
+additionally rejects duplicate entries by comparing `items.size()` against
+`items.toSet().size()` (a list with any repeat collapses to a smaller set). Both checks
+are supported natively by the Firestore Rules language, so there's no brittle
+workaround here — every entry must be one of the known stored values, and no entry may
+repeat.
+
+**Deliberately no minimum array-size check** (e.g. "goals must have ≥1 entry") at the
+rules level, even though the onboarding UI requires it. Two reasons: (1) the product
+rule ("choose at least one goal") is UX for a specific flow, not an account-level
+invariant that should also gate every future write path (e.g. a later "edit profile"
+screen might reasonably allow clearing a selection mid-edit before re-adding); (2) it
+keeps the missing-profile recovery path (above) simple — the repair flow resets
+`onboardingCompleted` to `false` and routes the user back through onboarding to
+rebuild `profiles/{uid}` with real answers, rather than needing to create any
+placeholder document under a rules-enforced minimum. `experienceLevel`'s enum check has
+no such tension (a missing/invalid value has no valid "empty" state the way an array
+does), so it's enforced strictly, same as before.
+
+### Tests
+
+`firestore.rules.test.ts` gained a `profiles/{uid}` suite mirroring the existing
+`users/{uid}` one (unauthenticated denial, owner create/read/update, immutable
+`uid`/`createdAt`, rejected extra fields, rejected invalid `experienceLevel`, rejected
+oversized arrays, denied delete, cross-user denial), plus (Phase 2A.1) rejected unknown
+stored values and rejected duplicate values for each of `goals`/`trainingInterests`/
+`trainingVibes` — run via `npm run test:rules` against the emulator, same as Phase 1A.
+`src/features/onboarding/validation.test.ts` unit-tests the step validators.
+`src/services/firebase/profile.test.ts` (Phase 2A.1) unit-tests
+`beginProfileRepair`'s decision logic against a mocked `firebase/firestore` (no
+emulator needed, runs under plain `npm test`): a profile that already exists leaves
+`onboardingCompleted` untouched, a confirmed-missing profile resets it to `false`, and
+a failed read propagates without resetting anything. `photoURL`/Cloud Storage upload is
+not implemented — the schema field exists (`null` for now) so it's easy to add later;
+the current UI shows an initials-based `BrandAvatar` instead.

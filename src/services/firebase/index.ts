@@ -21,3 +21,11 @@ export {
   fetchUserProfile,
   updateUserProfile,
 } from '@/services/firebase/firestore';
+
+export {
+  beginProfileRepair,
+  completeOnboarding,
+  createProfile,
+  getProfile,
+  updateProfile,
+} from '@/services/firebase/profile';
