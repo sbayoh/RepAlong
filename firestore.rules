@@ -1,0 +1,76 @@
+rules_version = '2';
+
+// Phase 1A — private account-foundation data only.
+//
+// `users/{uid}` is PRIVATE account data (identity/contact/status), never a
+// public/discoverable profile. A later phase introduces a separate public
+// profile collection for discovery; this document must never be read by
+// anyone other than its owner. See docs/architecture.md.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+
+      allow create: if isOwner(userId) && isValidNewUserDoc(userId);
+
+      allow update: if isOwner(userId) && isValidUserUpdate();
+
+      allow delete: if false;
+    }
+
+    // Default-deny: every other path is inaccessible until a later phase
+    // explicitly opens it.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+
+  function isOwner(userId) {
+    return request.auth != null && request.auth.uid == userId;
+  }
+
+  function userDocFields() {
+    return [
+      'uid', 'email', 'firstName', 'lastName', 'displayName',
+      'createdAt', 'updatedAt', 'onboardingCompleted', 'accountStatus',
+    ];
+  }
+
+  // New documents may only be created with the caller's own uid, a fresh
+  // server-resolved createdAt/updatedAt (so clients can't backdate them),
+  // and accountStatus fixed to 'active' — a client can never self-create as
+  // e.g. 'suspended'.
+  function isValidNewUserDoc(userId) {
+    let incoming = request.resource.data;
+    return incoming.uid == userId
+      && incoming.email is string
+      && incoming.firstName is string
+      && incoming.lastName is string
+      && incoming.displayName is string
+      && incoming.onboardingCompleted == false
+      && incoming.accountStatus == 'active'
+      && incoming.createdAt == request.time
+      && incoming.updatedAt == request.time
+      && incoming.keys().hasOnly(userDocFields());
+  }
+
+  // Updates may only touch name/onboarding fields. uid, email, createdAt,
+  // and accountStatus are fixed post-creation from the client's perspective
+  // — accountStatus can only change later via a trusted server path (e.g. a
+  // future Cloud Function), which does not exist yet in this phase.
+  function isValidUserUpdate() {
+    let incoming = request.resource.data;
+    let existing = resource.data;
+    return incoming.uid == existing.uid
+      && incoming.email == existing.email
+      && incoming.createdAt == existing.createdAt
+      && incoming.accountStatus == existing.accountStatus
+      && incoming.updatedAt == request.time
+      && incoming.firstName is string
+      && incoming.lastName is string
+      && incoming.displayName is string
+      && incoming.onboardingCompleted is bool
+      && incoming.keys().hasOnly(userDocFields());
+  }
+}

@@ -24,6 +24,12 @@ expo-env.d.ts
 *service-account*.json
 firebase-adminsdk*.json
 
+# Firebase Emulator Suite local artifacts
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+.firebase/
+
 # Metro
 .metro-health-check*
 
