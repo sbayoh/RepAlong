@@ -1,0 +1,22 @@
+<!--
+  RepAlong full lockup — light-surface variant (mark + REPALONG wordmark).
+  Static reference export only. The in-app `RepAlongMark` component (variant="full")
+  renders the wordmark live via the system font through `ThemedText`, not this SVG text
+  node — this file exists for marketing/print/doc use where a flattened asset is needed.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 190">
+  <defs>
+    <linearGradient id="repalong-a-gradient" x1="10%" y1="0%" x2="90%" y2="100%">
+      <stop offset="0%" stop-color="#1DB56A"/>
+      <stop offset="100%" stop-color="#22C1B1"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#repalong-a-gradient)" d="M150,60 L210,146 L196,172 L92,172 Z"/>
+  <path fill="#0F3D2E" fill-rule="evenodd" d="
+    M14,14 L108,14 C132,14 132,50 118,64 C108,76 98,86 86,86
+    L156,170 L128,170 L58,86 L40,86 L40,170 L14,170 Z
+    M40,40 L92,40 C112,40 112,64 100,74 C92,80 84,80 74,80 L40,80 Z
+  "/>
+  <text x="244" y="112" font-family="Arial, Helvetica, sans-serif" font-weight="700"
+        font-size="60" letter-spacing="6" fill="#0F3D2E">REPALONG</text>
+</svg>

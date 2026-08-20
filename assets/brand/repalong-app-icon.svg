@@ -1,0 +1,23 @@
+<!--
+  RepAlong app icon — flattened square canvas (Deep Forest fill, centered mark). The OS
+  applies its own corner-rounding mask (iOS) or adaptive-icon mask (Android), so this
+  stays a plain square, not a pre-rounded rect. Source for repalong-app-icon.png / iOS
+  icon export. Android uses repalong-app-icon-foreground.svg + a flat background instead.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="repalong-a-gradient" x1="10%" y1="0%" x2="90%" y2="100%">
+      <stop offset="0%" stop-color="#1DB56A"/>
+      <stop offset="100%" stop-color="#22C1B1"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="1024" height="1024" fill="#0F3D2E"/>
+  <g transform="translate(164.8,223.7) scale(3.1)">
+    <path fill="url(#repalong-a-gradient)" d="M150,60 L210,146 L196,172 L92,172 Z"/>
+    <path fill="#FAFAF6" fill-rule="evenodd" d="
+      M14,14 L108,14 C132,14 132,50 118,64 C108,76 98,86 86,86
+      L156,170 L128,170 L58,86 L40,86 L40,170 L14,170 Z
+      M40,40 L92,40 C112,40 112,64 100,74 C92,80 84,80 74,80 L40,80 Z
+    "/>
+  </g>
+</svg>

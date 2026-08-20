@@ -51,3 +51,18 @@ export function validateSignInForm(values: SignInFormValues): string | null {
   }
   return null;
 }
+
+export type ForgotPasswordFormValues = {
+  email: string;
+};
+
+export function validateForgotPasswordForm(values: ForgotPasswordFormValues): string | null {
+  const email = values.email.trim();
+  if (!email) {
+    return 'Enter your email address.';
+  }
+  if (!isValidEmail(email)) {
+    return 'Enter a valid email address.';
+  }
+  return null;
+}

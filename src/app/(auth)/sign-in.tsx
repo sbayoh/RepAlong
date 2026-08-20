@@ -1,14 +1,15 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
 
+import { BrandButton } from '@/components/brand/BrandButton';
+import { BrandScreen } from '@/components/brand/BrandScreen';
+import { BrandSectionHeader } from '@/components/brand/BrandSectionHeader';
+import { BrandTextField } from '@/components/brand/BrandTextField';
+import { RepAlongMark } from '@/components/brand/RepAlongMark';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { useAuthSession } from '@/features/auth/AuthContext';
-import { AuthButton } from '@/features/auth/components/AuthButton';
-import { AuthTextField } from '@/features/auth/components/AuthTextField';
 import { ErrorBanner } from '@/features/auth/components/ErrorBanner';
 import { validateSignInForm } from '@/features/auth/validation';
 
@@ -43,60 +44,56 @@ export default function SignInScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.select({ ios: 'padding', default: undefined })}>
-      <ThemedView style={styles.flex}>
-        <SafeAreaView style={styles.flex}>
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled">
-            <ThemedText type="title" style={styles.heading}>
-              Sign in
-            </ThemedText>
+    <BrandScreen scrollable contentStyle={styles.content}>
+      <RepAlongMark variant="symbol" size="md" />
+      <BrandSectionHeader title="Sign in" subtitle="Welcome back — pick up where you left off." />
 
-            <AuthTextField
-              label="Email"
-              autoCapitalize="none"
-              autoComplete="email"
-              keyboardType="email-address"
-              textContentType="emailAddress"
-              value={email}
-              onChangeText={setEmail}
-              editable={!isSubmitting}
-            />
-            <AuthTextField
-              label="Password"
-              secureTextEntry
-              autoComplete="password"
-              textContentType="password"
-              value={password}
-              onChangeText={setPassword}
-              editable={!isSubmitting}
-            />
+      <View style={styles.fields}>
+        <BrandTextField
+          label="Email"
+          autoCapitalize="none"
+          autoComplete="email"
+          keyboardType="email-address"
+          textContentType="emailAddress"
+          value={email}
+          onChangeText={setEmail}
+          editable={!isSubmitting}
+        />
+        <BrandTextField
+          label="Password"
+          secureTextEntry
+          autoComplete="password"
+          textContentType="password"
+          value={password}
+          onChangeText={setPassword}
+          editable={!isSubmitting}
+        />
+        <ThemedText
+          type="bodySmall"
+          themeColor="brandPrimary"
+          style={styles.forgotLink}
+          onPress={() => router.push('/forgot-password')}
+          accessibilityRole="link">
+          Forgot password?
+        </ThemedText>
+      </View>
 
-            {error ? <ErrorBanner message={error} /> : null}
+      {error ? <ErrorBanner message={error} /> : null}
 
-            <AuthButton label="Sign in" onPress={handleSubmit} loading={isSubmitting} />
-          </ScrollView>
-        </SafeAreaView>
-      </ThemedView>
-    </KeyboardAvoidingView>
+      <BrandButton label="Sign in" onPress={handleSubmit} loading={isSubmitting} />
+    </BrandScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: Spacing.four,
+  content: {
+    justifyContent: 'center',
     gap: Spacing.three,
-    maxWidth: MaxContentWidth,
-    width: '100%',
-    alignSelf: 'center',
   },
-  heading: {
-    marginBottom: Spacing.two,
+  fields: {
+    gap: Spacing.three,
+  },
+  forgotLink: {
+    alignSelf: 'flex-end',
   },
 });

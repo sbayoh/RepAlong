@@ -15,6 +15,15 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
 
 const DEFAULT_AUTH_ERROR_MESSAGE = 'Something went wrong. Please try again.';
 
+/**
+ * True when `error` is Firebase's "no account matches this email" code. Password reset
+ * uses this to swallow the error into a success response — never revealing whether an
+ * account exists — rather than mapping it through `getAuthErrorMessage`.
+ */
+export function isAccountNotFoundError(error: unknown): boolean {
+  return error instanceof FirebaseError && error.code === 'auth/user-not-found';
+}
+
 /** Maps a Firebase Auth error to a user-facing message. Never exposes raw error codes/objects. */
 export function getAuthErrorMessage(error: unknown): string {
   if (error instanceof FirebaseError) {

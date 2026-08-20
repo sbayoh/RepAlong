@@ -6,13 +6,14 @@ export { firebaseAuth } from '@/services/firebase/authInstance';
 export {
   getCurrentFirebaseUser,
   isCurrentUserEmailVerified,
+  sendPasswordReset,
   signInWithEmail,
   signOutUser,
   signUpWithEmail,
   subscribeToAuthChanges,
 } from '@/services/firebase/auth';
 export type { EmailCredentials } from '@/services/firebase/auth';
-export { getAuthErrorMessage } from '@/services/firebase/authErrors';
+export { getAuthErrorMessage, isAccountNotFoundError } from '@/services/firebase/authErrors';
 
 export { firestoreDb } from '@/services/firebase/firestoreInstance';
 export {

@@ -1,6 +1,7 @@
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
@@ -33,6 +34,15 @@ export async function signInWithEmail({ email, password }: EmailCredentials): Pr
 
 export async function signOutUser(): Promise<void> {
   await signOut(firebaseAuth);
+}
+
+/**
+ * Sends a password-reset email. Throws `auth/user-not-found` when no account matches —
+ * callers should treat that as recoverable (see `isAccountNotFoundError` in
+ * `authErrors.ts`) rather than surfacing it, so the UI never reveals account existence.
+ */
+export async function sendPasswordReset(email: string): Promise<void> {
+  await sendPasswordResetEmail(firebaseAuth, email);
 }
 
 /** Subscribes to Auth session changes. Returns an unsubscribe function. */

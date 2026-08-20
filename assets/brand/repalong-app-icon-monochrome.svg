@@ -1,0 +1,14 @@
+<!--
+  Android themed-icon monochrome layer — single-color silhouette (Android 13+ tints this
+  itself; only the alpha shape matters, not the fill color).
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <g transform="translate(164.8,223.7) scale(3.1)">
+    <path fill="#FFFFFF" d="M150,60 L210,146 L196,172 L92,172 Z"/>
+    <path fill="#FFFFFF" fill-rule="evenodd" d="
+      M14,14 L108,14 C132,14 132,50 118,64 C108,76 98,86 86,86
+      L156,170 L128,170 L58,86 L40,86 L40,170 L14,170 Z
+      M40,40 L92,40 C112,40 112,64 100,74 C92,80 84,80 74,80 L40,80 Z
+    "/>
+  </g>
+</svg>

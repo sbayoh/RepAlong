@@ -1,4 +1,9 @@
-import { isValidEmail, validateSignInForm, validateSignUpForm } from '@/features/auth/validation';
+import {
+  isValidEmail,
+  validateForgotPasswordForm,
+  validateSignInForm,
+  validateSignUpForm,
+} from '@/features/auth/validation';
 
 describe('isValidEmail', () => {
   it('accepts a well-formed email', () => {
@@ -63,5 +68,23 @@ describe('validateSignInForm', () => {
     expect(validateSignInForm({ email: 'not-an-email', password: 'anything' })).toMatch(
       /valid email/i,
     );
+  });
+});
+
+describe('validateForgotPasswordForm', () => {
+  it('returns null for a valid email', () => {
+    expect(validateForgotPasswordForm({ email: 'jane@example.com' })).toBeNull();
+  });
+
+  it('rejects an empty email', () => {
+    expect(validateForgotPasswordForm({ email: '' })).toMatch(/enter your email/i);
+  });
+
+  it('treats a whitespace-only email as missing', () => {
+    expect(validateForgotPasswordForm({ email: '   ' })).toMatch(/enter your email/i);
+  });
+
+  it('rejects a malformed email', () => {
+    expect(validateForgotPasswordForm({ email: 'not-an-email' })).toMatch(/valid email/i);
   });
 });

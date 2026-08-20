@@ -14,6 +14,8 @@ import {
   ensureUserProfile,
   fetchUserProfile,
   getAuthErrorMessage,
+  isAccountNotFoundError,
+  sendPasswordReset,
   signInWithEmail,
   signOutUser,
   signUpWithEmail,
@@ -58,6 +60,7 @@ type AuthContextValue = {
   signIn: (input: SignInInput) => Promise<void>;
   signOutSession: () => Promise<void>;
   retryProfileSetup: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -161,6 +164,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }, []);
 
+  const resetPassword = useCallback(async (email: string) => {
+    try {
+      await sendPasswordReset(email.trim());
+    } catch (error) {
+      if (isAccountNotFoundError(error)) {
+        // Privacy-safe: never reveal whether an account exists for this email.
+        return;
+      }
+      throw new Error(getAuthErrorMessage(error));
+    }
+  }, []);
+
   const signOutSession = useCallback(async () => {
     await signOutUser();
     setProfile(null);
@@ -201,6 +216,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       signIn,
       signOutSession,
       retryProfileSetup,
+      resetPassword,
     }),
     [
       firebaseUser,
@@ -212,6 +228,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       signIn,
       signOutSession,
       retryProfileSetup,
+      resetPassword,
     ],
   );
 

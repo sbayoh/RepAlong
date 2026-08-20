@@ -1,12 +1,15 @@
-import { StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
 
+import { BrandBadge } from '@/components/brand/BrandBadge';
+import { BrandButton } from '@/components/brand/BrandButton';
+import { BrandCard } from '@/components/brand/BrandCard';
+import { BrandErrorState } from '@/components/brand/BrandErrorState';
+import { BrandLoadingState } from '@/components/brand/BrandLoadingState';
+import { BrandScreen } from '@/components/brand/BrandScreen';
+import { RepAlongMark } from '@/components/brand/RepAlongMark';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { useAuthSession } from '@/features/auth/AuthContext';
-import { AuthButton } from '@/features/auth/components/AuthButton';
-import { ErrorBanner } from '@/features/auth/components/ErrorBanner';
 
 export default function SignedInFoundationScreen() {
   const { firebaseUser, profile, isProfileLoading, profileError, signOutSession, retryProfileSetup } =
@@ -16,68 +19,64 @@ export default function SignedInFoundationScreen() {
   const showSetupNotice = !isProfileLoading && !profile;
 
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.content}>
-          <ThemedText type="title" style={styles.heading}>
-            Welcome to RepAlong, {firstName}
-          </ThemedText>
-          <ThemedText type="default" themeColor="textSecondary">
-            Your account foundation is ready.
-          </ThemedText>
+    <BrandScreen contentStyle={styles.content}>
+      <View style={styles.header}>
+        <RepAlongMark variant="symbol" size="sm" />
+        <BrandButton label="Sign out" variant="ghost" onPress={signOutSession} />
+      </View>
 
-          <ThemedView type="backgroundElement" style={styles.emailPill}>
-            <ThemedText type="small" themeColor="textSecondary">
+      <View style={styles.body}>
+        <ThemedText type="headline">Welcome to RepAlong, {firstName}</ThemedText>
+        <ThemedText type="body" themeColor="textSecondary">
+          Your account foundation is ready. The full RepAlong experience is on its way.
+        </ThemedText>
+
+        <BrandCard style={styles.accountCard}>
+          <View style={styles.accountRow}>
+            <ThemedText type="bodySmall" themeColor="textSecondary">
               {firebaseUser?.email}
             </ThemedText>
-          </ThemedView>
+            <BrandBadge
+              label={showSetupNotice ? 'Setup pending' : 'Account active'}
+              tone={showSetupNotice ? 'warning' : 'success'}
+            />
+          </View>
 
-          {isProfileLoading ? (
-            <ThemedText type="small" themeColor="textSecondary">
-              Setting up your profile…
-            </ThemedText>
-          ) : null}
+          {isProfileLoading ? <BrandLoadingState label="Setting up your profile…" /> : null}
 
           {showSetupNotice ? (
-            <ThemedView style={styles.setupNotice}>
-              <ErrorBanner message={profileError ?? 'Your profile setup is still finishing.'} />
-              <AuthButton label="Retry profile setup" variant="secondary" onPress={retryProfileSetup} />
-            </ThemedView>
+            <BrandErrorState
+              message={profileError ?? 'Your profile setup is still finishing.'}
+              onRetry={retryProfileSetup}
+              retryLabel="Retry profile setup"
+            />
           ) : null}
-        </ThemedView>
-
-        <AuthButton label="Sign out" variant="secondary" onPress={signOutSession} />
-      </SafeAreaView>
-    </ThemedView>
+        </BrandCard>
+      </View>
+    </BrandScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-    padding: Spacing.four,
-    justifyContent: 'space-between',
-    alignSelf: 'center',
-    maxWidth: MaxContentWidth,
-    width: '100%',
-  },
   content: {
+    flex: 1,
+    gap: Spacing.five,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  body: {
     gap: Spacing.three,
   },
-  heading: {
-    fontSize: 28,
-    lineHeight: 34,
+  accountCard: {
+    gap: Spacing.three,
   },
-  emailPill: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    borderRadius: Spacing.five,
-  },
-  setupNotice: {
+  accountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: Spacing.two,
   },
 });

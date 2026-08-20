@@ -1,8 +1,8 @@
 # RepAlong — Foundation Architecture
 
-Status: Phase 1A — Authentication + Firestore foundation. Email/Password auth only
-(Google Sign-In, Apple Sign-In, password reset, and mandatory email verification are
-later, separately reviewed phases).
+Status: Phase 1A — Authentication + Firestore foundation. Email/Password auth, plus
+password reset added in Phase 1B (§9a) (Google Sign-In, Apple Sign-In, and mandatory
+email verification remain later, separately reviewed phases).
 
 ## 1. Universal Expo architecture
 
@@ -119,6 +119,20 @@ app init:
   Firebase error objects/codes are never shown to the user; unmapped codes fall back
   to a generic message and log the code in dev only.
 
+### 9a. Password reset (Phase 1B)
+
+`sendPasswordReset(email)` in `auth.ts` wraps Firebase's `sendPasswordResetEmail` — the
+only new Auth SDK call added. `AuthContext.resetPassword(email)` is the screen-facing
+entry point (`src/app/(auth)/forgot-password.tsx`).
+
+**Privacy-safe by design:** Firebase throws `auth/user-not-found` when no account
+matches the given email. `resetPassword` catches that one code specifically via
+`isAccountNotFoundError` (`authErrors.ts`) and resolves normally instead of
+re-throwing — every other error still maps through `getAuthErrorMessage` and surfaces
+to the user as usual. The screen therefore always renders the same "check your email"
+success state regardless of whether the account exists, so the UI never confirms or
+denies account existence for a given email address.
+
 ### Auth persistence
 
 Firebase owns all credential/session storage — the app never reads or writes tokens
@@ -174,8 +188,8 @@ API (current SDK 57 recommended pattern — see
 [Expo Router authentication guide](https://docs.expo.dev/router/advanced/authentication/))
 to mount exactly one of two route groups based on session state:
 
-- `src/app/(auth)/` — `index.tsx` (Welcome), `sign-up.tsx`, `sign-in.tsx`. Mounted when
-  `firebaseUser` is null.
+- `src/app/(auth)/` — `index.tsx` (Welcome), `sign-up.tsx`, `sign-in.tsx`,
+  `forgot-password.tsx`. Mounted when `firebaseUser` is null.
 - `src/app/(app)/` — `index.tsx` (signed-in foundation screen). Mounted when
   `firebaseUser` is present.
 
@@ -325,7 +339,8 @@ exists.
 
 ## 14. What is intentionally NOT implemented in Phase 1A
 
-Google Sign-In, Apple Sign-In, password reset, mandatory email verification (the
-service layer exposes `isCurrentUserEmailVerified()` for a later phase to use, but no
-verification flow exists yet), Cloud Functions, deployed security rules, location,
-gyms, Host profiles, Shadow Sessions, Stripe. All later, separately reviewed phases.
+Google Sign-In, Apple Sign-In, mandatory email verification (the service layer exposes
+`isCurrentUserEmailVerified()` for a later phase to use, but no verification flow
+exists yet), Cloud Functions, deployed security rules, location, gyms, Host profiles,
+Shadow Sessions, Stripe. All later, separately reviewed phases. (Password reset was
+added in Phase 1B — see §9a.)

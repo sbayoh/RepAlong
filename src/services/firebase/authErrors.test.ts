@@ -1,6 +1,6 @@
 import { FirebaseError } from 'firebase/app';
 
-import { getAuthErrorMessage } from '@/services/firebase/authErrors';
+import { getAuthErrorMessage, isAccountNotFoundError } from '@/services/firebase/authErrors';
 
 function firebaseError(code: string): FirebaseError {
   return new FirebaseError(code, `Firebase: Error (${code}).`);
@@ -35,5 +35,24 @@ describe('getAuthErrorMessage', () => {
   it('never leaks the raw error for non-Firebase errors', () => {
     const message = getAuthErrorMessage(new Error('some internal stack trace detail'));
     expect(message).toBe('Something went wrong. Please try again.');
+  });
+});
+
+describe('isAccountNotFoundError', () => {
+  it('returns true for auth/user-not-found', () => {
+    expect(isAccountNotFoundError(firebaseError('auth/user-not-found'))).toBe(true);
+  });
+
+  it('returns false for a different Firebase error code', () => {
+    expect(isAccountNotFoundError(firebaseError('auth/too-many-requests'))).toBe(false);
+  });
+
+  it('returns false for a non-Firebase error', () => {
+    expect(isAccountNotFoundError(new Error('not a firebase error'))).toBe(false);
+  });
+
+  it('returns false for a non-error value', () => {
+    expect(isAccountNotFoundError(null)).toBe(false);
+    expect(isAccountNotFoundError(undefined)).toBe(false);
   });
 });

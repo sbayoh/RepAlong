@@ -1,0 +1,23 @@
+<!--
+  RepAlong "simple monogram" — the one approved circular-badge treatment, reserved for
+  tiny-scale contexts (browser favicon) where the flat mark alone loses contrast against
+  arbitrary surrounding chrome. Not used for the primary in-app mark (RepAlongMark never
+  renders a circle) — see docs/brand-system.md §7 for the distinction.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="repalong-a-gradient" x1="10%" y1="0%" x2="90%" y2="100%">
+      <stop offset="0%" stop-color="#1DB56A"/>
+      <stop offset="100%" stop-color="#22C1B1"/>
+    </linearGradient>
+  </defs>
+  <circle cx="50" cy="50" r="48" fill="#0F3D2E"/>
+  <g transform="translate(5.2,12.8) scale(0.4)">
+    <path fill="url(#repalong-a-gradient)" d="M150,60 L210,146 L196,172 L92,172 Z"/>
+    <path fill="#FAFAF6" fill-rule="evenodd" d="
+      M14,14 L108,14 C132,14 132,50 118,64 C108,76 98,86 86,86
+      L156,170 L128,170 L58,86 L40,86 L40,170 L14,170 Z
+      M40,40 L92,40 C112,40 112,64 100,74 C92,80 84,80 74,80 L40,80 Z
+    "/>
+  </g>
+</svg>

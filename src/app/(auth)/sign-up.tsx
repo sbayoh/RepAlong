@@ -1,16 +1,16 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { BrandButton } from '@/components/brand/BrandButton';
+import { BrandScreen } from '@/components/brand/BrandScreen';
+import { BrandSectionHeader } from '@/components/brand/BrandSectionHeader';
+import { BrandTextField } from '@/components/brand/BrandTextField';
+import { RepAlongMark } from '@/components/brand/RepAlongMark';
+import { Spacing } from '@/constants/theme';
 import { ProfileSetupError, useAuthSession } from '@/features/auth/AuthContext';
-import { AuthButton } from '@/features/auth/components/AuthButton';
-import { AuthTextField } from '@/features/auth/components/AuthTextField';
 import { ErrorBanner } from '@/features/auth/components/ErrorBanner';
-import { validateSignUpForm } from '@/features/auth/validation';
+import { MIN_PASSWORD_LENGTH, validateSignUpForm } from '@/features/auth/validation';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -58,87 +58,73 @@ export default function SignUpScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.select({ ios: 'padding', default: undefined })}>
-      <ThemedView style={styles.flex}>
-        <SafeAreaView style={styles.flex}>
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled">
-            <ThemedText type="title" style={styles.heading}>
-              Create account
-            </ThemedText>
+    <BrandScreen scrollable contentStyle={styles.content}>
+      <RepAlongMark variant="symbol" size="md" />
+      <BrandSectionHeader title="Create account" subtitle="Join RepAlong and find someone to train with." />
 
-            <AuthTextField
-              label="First name"
-              autoCapitalize="words"
-              autoComplete="given-name"
-              textContentType="givenName"
-              value={firstName}
-              onChangeText={setFirstName}
-              editable={!isSubmitting}
-            />
-            <AuthTextField
-              label="Last name"
-              autoCapitalize="words"
-              autoComplete="family-name"
-              textContentType="familyName"
-              value={lastName}
-              onChangeText={setLastName}
-              editable={!isSubmitting}
-            />
-            <AuthTextField
-              label="Email"
-              autoCapitalize="none"
-              autoComplete="email"
-              keyboardType="email-address"
-              textContentType="emailAddress"
-              value={email}
-              onChangeText={setEmail}
-              editable={!isSubmitting}
-            />
-            <AuthTextField
-              label="Password"
-              secureTextEntry
-              autoComplete="new-password"
-              textContentType="newPassword"
-              value={password}
-              onChangeText={setPassword}
-              editable={!isSubmitting}
-            />
-            <AuthTextField
-              label="Confirm password"
-              secureTextEntry
-              autoComplete="new-password"
-              textContentType="newPassword"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              editable={!isSubmitting}
-            />
+      <View style={styles.fields}>
+        <BrandTextField
+          label="First name"
+          autoCapitalize="words"
+          autoComplete="given-name"
+          textContentType="givenName"
+          value={firstName}
+          onChangeText={setFirstName}
+          editable={!isSubmitting}
+        />
+        <BrandTextField
+          label="Last name"
+          autoCapitalize="words"
+          autoComplete="family-name"
+          textContentType="familyName"
+          value={lastName}
+          onChangeText={setLastName}
+          editable={!isSubmitting}
+        />
+        <BrandTextField
+          label="Email"
+          autoCapitalize="none"
+          autoComplete="email"
+          keyboardType="email-address"
+          textContentType="emailAddress"
+          value={email}
+          onChangeText={setEmail}
+          editable={!isSubmitting}
+        />
+        <BrandTextField
+          label="Password"
+          helperText={`At least ${MIN_PASSWORD_LENGTH} characters.`}
+          secureTextEntry
+          autoComplete="new-password"
+          textContentType="newPassword"
+          value={password}
+          onChangeText={setPassword}
+          editable={!isSubmitting}
+        />
+        <BrandTextField
+          label="Confirm password"
+          secureTextEntry
+          autoComplete="new-password"
+          textContentType="newPassword"
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          editable={!isSubmitting}
+        />
+      </View>
 
-            {error ? <ErrorBanner message={error} /> : null}
+      {error ? <ErrorBanner message={error} /> : null}
 
-            <AuthButton label="Create account" onPress={handleSubmit} loading={isSubmitting} />
-          </ScrollView>
-        </SafeAreaView>
-      </ThemedView>
-    </KeyboardAvoidingView>
+      <BrandButton label="Create account" onPress={handleSubmit} loading={isSubmitting} />
+    </BrandScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: Spacing.four,
+  content: {
+    justifyContent: 'center',
     gap: Spacing.three,
-    maxWidth: MaxContentWidth,
-    width: '100%',
-    alignSelf: 'center',
   },
-  heading: {
-    marginBottom: Spacing.two,
+  fields: {
+    gap: Spacing.three,
   },
 });
